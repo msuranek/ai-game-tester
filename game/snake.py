@@ -4,9 +4,8 @@ The board is rendered as ASCII for the Claude agent.
 """
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Direction(Enum):
@@ -44,9 +43,12 @@ class GameState:
 
 
 class SnakeGame:
-    def __init__(self, width: int = 8, height: int = 8):
+    def __init__(self, width: int = 8, height: int = 8, seed: int | None = None):
+        if width < 4 or height < 2:
+            raise ValueError("Board must be at least 4x2")
         self.width = width
         self.height = height
+        self._random = random.Random(seed)
         self._reset()
 
     def _reset(self):
@@ -66,7 +68,7 @@ class SnakeGame:
             for y in range(self.height)
             if (x, y) not in occupied
         ]
-        return random.choice(empty) if empty else (0, 0)
+        return self._random.choice(empty) if empty else (0, 0)
 
     @property
     def state(self) -> GameState:

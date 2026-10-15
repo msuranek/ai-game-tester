@@ -1,6 +1,12 @@
 # AI Game Tester — Claude plays Snake
 
+[![CI](https://github.com/msuranek/ai-game-tester/actions/workflows/ci.yml/badge.svg)](https://github.com/msuranek/ai-game-tester/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Ukázkový projekt: LLM agent (Claude Haiku) hraje hada v terminálu a rozhoduje každý tah na základě ASCII reprezentace hrací plochy.
+
+![Ukázka hry Snake řízené modelem Claude](assets/snake-demo.gif)
 
 ---
 
@@ -36,7 +42,7 @@ MOVE: UP
 ## Instalace
 
 ```bash
-git clone https://github.com/aidevelopers-cz/ai-game-tester
+git clone https://github.com/msuranek/ai-game-tester.git
 cd ai-game-tester
 
 python3 -m venv .venv
@@ -88,11 +94,11 @@ python main.py --benchmark 10
 Spustí 10 her za sebou bez display a vypíše statistiky. Každá tečka = jeden tah Claude:
 
 ```
-Running 10 games on 12x12 board...
+Running 10 games on 8x8 board...
 
-  Game   1: ..........................................  score=4  steps=42  time=36.5s
-  Game   2: ....................  score=2  steps=20  time=17.1s
-  Game   3: ....................................................................  score=6  steps=68  time=58.3s
+  Game   1: ..........................................  score=4  steps=42  status=game_over  time=36.5s
+  Game   2: ....................  score=2  steps=20  status=game_over  time=17.1s
+  Game   3: ....................................................................  score=6  steps=68  status=game_over  time=58.3s
   ...
 
 ========================================
@@ -108,6 +114,24 @@ Running 10 games on 12x12 board...
 
 Právě tady se projekt stává nástrojem pro testování — můžeš měřit jak změny promptu ovlivní výkon agenta.
 
+Pro opakovatelné experimenty nastav seed a výsledky ulož do JSON nebo CSV:
+
+```bash
+python main.py --benchmark 10 --seed 42 --output results.json
+python main.py --benchmark 10 --seed 42 --max-steps 500 --output results.csv
+```
+
+Jiný model nebo prompt lze otestovat bez zásahu do kódu:
+
+```bash
+python main.py --benchmark 10 --seed 42 --model MODEL_ID
+python main.py --benchmark 10 --seed 42 --prompt-file prompts/experiment.txt
+```
+
+Při porovnávání variant použij stejný seed a počet her. Jednotlivé hry pak dostanou po sobě jdoucí seedy (`42`, `43`, …), takže začnou se stejnými náhodnými podmínkami.
+
+Benchmark má bezpečnostní limit 1 000 tahů na hru, aby cyklus agenta neutratil neomezený počet API volání. Změníš ho přes `--max-steps`.
+
 ### Další volby
 
 ```bash
@@ -116,6 +140,7 @@ python main.py --size 6           # menší plocha, rychlejší hry
 python main.py --delay 0.1        # rychlejší animace
 python main.py --no-display       # headless, jen výsledné skóre
 python main.py --benchmark 5      # 5 her, výchozí 8×8
+python main.py --benchmark 5 --seed 42 --output results.json
 ```
 
 ---
@@ -130,12 +155,14 @@ ai-game-tester/
     claude_agent.py   # volá Claude API a parsuje odpověď
   main.py             # game loop, terminálový výstup, benchmark
   requirements.txt
+  tests/              # testy herní logiky, parseru a benchmarku
   .env.example
 ```
 
 ### `game/snake.py`
 
 Čistá herní logika bez jakékoli závislosti na AI nebo display. Implementuje:
+
 - pohyb hada, kolize, sbírání jídla
 - `render()` → ASCII string pro Claude
 - `valid_moves()` → seznam tahů které hada okamžitě nezabijí
@@ -154,13 +181,27 @@ Spojuje hru s agentem. Tři režimy: živá hra, headless, benchmark.
 
 ## Cena
 
-Model `claude-haiku-4-5` je velmi levný. Orientační náklady:
+Model `claude-haiku-4-5` je velmi levný. Následující původní orientační odhady platí **k 1. 5. 2026**, tedy k datu prvního commitu projektu, pro model `claude-haiku-4-5-20251001`:
 
 | Režim | Tahy | Odhadovaná cena |
 |-------|------|-----------------|
 | 1 hra | ~50–200 tahů | < $0.001 |
 | benchmark 10 her | ~500–2000 tahů | < $0.01 |
 | benchmark 100 her | ~5000–20000 tahů | < $0.10 |
+
+Aktuální ceny se mohou lišit; před větším během zkontroluj [oficiální ceník Anthropic](https://www.anthropic.com/pricing#api).
+
+---
+
+## Vývoj a testy
+
+```bash
+pip install -r dev-requirements.txt
+ruff check .
+pytest
+```
+
+Testy pokrývají pohyb hada, kolize, sbírání jídla, `valid_moves()`, parser odpovědi modelu, bezpečný fallback a export benchmarku. GitHub Actions je spouští spolu s lintem na Pythonu 3.11, 3.12 a 3.13.
 
 ---
 
@@ -176,3 +217,7 @@ Projekt je záměrně jednoduchý — základ pro vlastní experimenty:
 ---
 
 Projekt vznikl jako demonstrace k článku [Nechte AI hrát moji hru](https://aidevelopers.cz/clanky/2026-04-29-nechte-ai-hrat-moji-hru-budovani-testovaciho-prostredi-pro-p) na [aidevelopers.cz](https://aidevelopers.cz).
+
+## Licence
+
+[MIT](LICENSE)
